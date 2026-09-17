@@ -96,15 +96,18 @@ Regenerate the `.pot` from the code rather than editing it. If you add a string:
 Maintainers only.
 
 1. Bump the version in **four** places: the `Version:` header in `rotate-everything.php`, `ROTATE_EVERYTHING_VERSION` in the same file, `Stable tag:` in `readme.txt`, and the heading in `CHANGELOG.md`.
-2. Add the release notes to `readme.txt`'s `== Changelog ==` and to `CHANGELOG.md`.
-3. Merge to `main` and wait for CI to come back green.
-4. Tag and push:
+2. Add the release notes to `readme.txt`'s `== Changelog ==` and to `CHANGELOG.md`. Both are checked by the deploy workflow.
+3. Validate `readme.txt` at https://wordpress.org/plugins/developers/readme-validator/ (needs a logged-in wordpress.org session). Two minutes here against several days of waiting if it is rejected.
+4. Merge to `main` and wait for CI to come back green.
+5. Tag and push:
    ```bash
    git tag v1.0.1
    git push origin v1.0.1
    ```
 
-`deploy.yml` fires on `v*`. Its first step compares the tag against the plugin header, the PHP constant and the readme's stable tag, and fails the run before anything is published if they disagree.
+`deploy.yml` fires on `v*`. Before touching SVN it checks the tag against the plugin header, the PHP constant and the readme's stable tag, refuses a stable tag of `trunk`, and requires a changelog section in both `CHANGELOG.md` and `readme.txt`. Any of those failing stops the run before anything is published. Once the directory has the release, the same job opens the GitHub release with the notes taken from `CHANGELOG.md`.
+
+Every action in both workflows is pinned to a commit SHA rather than a tag. A tag is a movable reference, and the deploy job holds the SVN credentials: whatever that tag pointed at tomorrow would publish under the maintainer's wordpress.org account. Bump a pin by editing the SHA and the comment together.
 
 ### The two secrets
 

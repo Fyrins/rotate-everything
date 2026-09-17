@@ -108,6 +108,16 @@ Registering it lazily rather than on a hook of its own is deliberate, and it is 
 
 Measured on WordPress 7.1 with Twenty Twenty-Five (block theme) and Twenty Twenty-One (classic theme): the link lands in `<head>` in both cases, because WordPress hoists late-printed styles through its template output buffer. Nothing depends on that, though. The rotation is an inline declaration, so a block stays tilted even if the stylesheet never arrives.
 
+### Why those minimum versions
+
+**WordPress 6.2** is the release `WP_HTML_Tag_Processor` shipped in. The five methods this plugin calls are all `@since 6.2.0`, checked in the WordPress 7.1.1 source rather than taken from memory: `next_tag()`, `get_tag()`, `get_attribute()`, `set_attribute()` and `get_updated_html()`.
+
+`has_class()` and `add_class()` would be more natural for adding a class, but they are `@since 6.4.0`, so the class is added by hand through `get_attribute()` and `set_attribute()` instead of raising the floor by two releases for nothing.
+
+**PHP 7.4** is WordPress's own floor, read from `https://api.wordpress.org/core/version-check/1.7/`, which reports `php_version: 7.4` for 7.1.1. The code uses no syntax newer than PHP 7.0, so the declared value is a support commitment aligned with core rather than a technical constraint. The CI matrix covers 7.4, 8.0, 8.1, 8.2, 8.3 and 8.4.
+
+One consequence worth knowing: `str_contains()` is available despite the PHP 7.4 floor, because WordPress has polyfilled it since 5.9, which is below the 6.2 floor.
+
 ### No build step
 
 The editor script is plain ES5 written against the global `wp` object and enqueued as-is. No `@wordpress/scripts`, no webpack, no JSX, no `node_modules` in the release. What is published is what can be read, and the diff of a release is the diff of the source.

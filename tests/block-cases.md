@@ -157,14 +157,26 @@ add_filter( 'rotate_everything_supported_blocks', fn( $b ) => array_merge( $b, a
 ```
 
 ```
-attrs:  { "rotation": 6 }
-in:     <ul class="wp-block-latest-posts__list wp-block-latest-posts"><li>…</li></ul>
-out:    <ul class="wp-block-latest-posts__list wp-block-latest-posts rotate-everything-rotated" style="transform:rotate(6deg);"><li>…</li></ul>
+<!-- wp:latest-posts {"rotation":6} /-->
+<!-- wp:archives {"rotation":-4} /-->
+```
+
+Rendered, verbatim:
+
+```html
+<ul style="transform:rotate(6deg);" class="wp-block-latest-posts__list wp-block-latest-posts is-layout-flow wp-block-latest-posts-is-layout-flow rotate-everything-rotated">
+<ul style="transform:rotate(-4deg);" class="wp-block-archives-list wp-block-archives rotate-everything-rotated">
 ```
 
 A dynamic block reaches `render_block` with its callback's output already built,
 so it is handled like any other. Its `<ul>` is the outermost rendering element
-and that is where the transform lands.
+and that is where the transform lands, and the classes core added through
+`get_block_wrapper_attributes()` survive.
+
+Note that neither block has a `save` function, so there is no saved markup to
+invalidate in the first place. The self-closing block comment carries the
+attribute and nothing else, which is the same mechanism the static case relies
+on, just more visible.
 
 ---
 

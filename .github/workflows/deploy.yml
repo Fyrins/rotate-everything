@@ -6,15 +6,18 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deploy:
     name: Publish
     runs-on: ubuntu-latest
     steps:
+      # Pinned to a commit SHA rather than a tag. This job holds the SVN
+      # credentials, and a tag is a movable reference: whatever it pointed at
+      # tomorrow would publish under the maintainer's wordpress.org account.
       - name: Check out
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The version lives in four places. A release where they disagree ships a
       # package the plugin directory reads one way and the update checker reads
@@ -32,6 +35,7 @@ jobs:
           fi
 
           TAG_VERSION="${TAG_NAME#v}"
+          echo "TAG_VERSION=$TAG_VERSION" >> "$GITHUB_ENV"
 
           HEADER_VERSION=$(awk '/^ \* Version:/ { print $3; exit }' rotate-everything.php)
           CONSTANT_VERSION=$(awk -F"'" '/^define\( .ROTATE_EVERYTHING_VERSION./ { print $4; exit }' rotate-everything.php)
@@ -57,15 +61,66 @@ jobs:
             fi
           done
 
+          # 'trunk' is refused for a new plugin, and it would make the directory
+          # serve whatever is in trunk instead of this release.
+          if [[ "$README_VERSION" == "trunk" ]]; then
+            echo "::error::readme.txt Stable tag is 'trunk'."
+            STATUS=1
+          fi
+
+          # Checked here rather than at release time: once the package is on
+          # wordpress.org, a missing changelog section can only be fixed by
+          # shipping another version.
+          if ! grep -qF "## [$TAG_VERSION]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$TAG_VERSION]' section."
+            STATUS=1
+          fi
+
+          if ! grep -qF "= $TAG_VERSION =" readme.txt; then
+            echo "::error::readme.txt has no '= $TAG_VERSION =' changelog entry."
+            STATUS=1
+          fi
+
           exit "$STATUS"
 
       # The action reads .distignore itself to build what it commits, and pushes
       # .wordpress-org/ to SVN's assets/ directory. The two secrets are created
       # by hand by the maintainer; see CONTRIBUTING.md. Until they exist this
       # step fails, which is the correct outcome.
-      - name: Deploy
-        uses: 10up/action-wordpress-plugin-deploy@2.3.0
+      #
+      # Pinned to the SHA of 2.3.0, for the reason given on the checkout step.
+      - name: Deploy to the plugin directory
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
         env:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
           SLUG: rotate-everything
+
+      # Only after the directory has the release, so a failed publish does not
+      # leave a GitHub release pointing at something that was never shipped.
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Everything between this version's heading and the next one.
+          NOTES=$(awk -v v="## [$TAG_VERSION]" '
+            index($0, v) == 1 { found = 1; next }
+            found && /^## \[/   { exit }
+            found               { print }
+          ' CHANGELOG.md)
+
+          if [[ -z "${NOTES//[[:space:]]/}" ]]; then
+            echo "::error::No changelog body found for $TAG_VERSION."
+            exit 1
+          fi
+
+          printf '%s\n\nOn the plugin directory: https://wordpress.org/plugins/rotate-everything/\n' \
+            "$NOTES" > "$RUNNER_TEMP/notes.md"
+
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --verify-tag
