@@ -1,0 +1,29 @@
+/*!
+ * Rotate Everything - front-end styles.
+ *
+ * The rotation itself is an inline transform written by the server, so a block
+ * stays tilted even if this file never loads. What is left here is only what an
+ * inline declaration cannot express: an origin that survives a theme reset, and
+ * a transition that can be switched off.
+ *
+ * This stylesheet is enqueued from render_block, so it is only ever requested
+ * on a page that actually contains a rotated block.
+ */
+
+.rotate-everything-rotated {
+	transform-origin: 50% 50%;
+	transition: transform var( --rotate-everything-duration, 0.2s ) ease;
+}
+
+/*
+ * A transform that animates is a vestibular disorder trigger, so it stops for
+ * anyone who has asked their system for less motion (WCAG 2.2, 2.3.3 Animation
+ * from Interactions). Nothing else changes: the block stays rotated, it just
+ * gets there without moving.
+ */
+@media ( prefers-reduced-motion: reduce ) {
+
+	.rotate-everything-rotated {
+		transition: none;
+	}
+}

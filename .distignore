@@ -1,0 +1,17 @@
+# Every hidden file and directory, first and without exception. A tool that
+# drops a cache or a log directory at the root of the plugin must not be able to
+# leak it into a published release, and Plugin Check does not always catch it.
+.*
+
+# Development tooling and repository paperwork. The published package carries
+# readme.txt, which is what the plugin directory reads.
+/build/
+/docs/
+/tests/
+/vendor/
+/composer.json
+/composer.lock
+/phpcs.xml.dist
+/CHANGELOG.md
+/CONTRIBUTING.md
+/README.md

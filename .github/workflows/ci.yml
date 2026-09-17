@@ -1,0 +1,108 @@
+name: CI
+
+# Both triggers are needed. `push` on main covers a direct commit and a merge;
+# `pull_request` without a branch filter covers every proposal, whatever branch
+# it comes from. A workflow that only listens to one of the two silently never
+# runs on the branch you actually work on.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  syntax:
+    name: Syntax, PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor declared in the plugin header, and every version above it
+        # that still gets security support.
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+
+      - name: Lint every PHP file
+        run: |
+          find . -path ./vendor -prune -o -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+  coding-standards:
+    name: Coding standards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: cs2pr
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+
+      # The project ruleset sets testVersion to 7.4- and minimum_wp_version to
+      # 6.2, so PHPCompatibilityWP and the deprecation sniffs check against the
+      # versions the plugin actually claims to support.
+      - name: Run PHPCS
+        run: vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
+
+      - name: Annotate the diff
+        if: ${{ always() }}
+        run: cs2pr ./phpcs-report.xml
+
+  plugin-check:
+    name: Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # Plugin Check has to look at the package, not at the working tree. Run on
+      # the source it reports the development files, and the directory name has
+      # to be exactly the slug because that is what it infers the text domain
+      # from. --delete-excluded is what makes a rebuild clean: without it rsync
+      # protects excluded files from deletion and the target keeps whatever the
+      # previous run left behind.
+      - name: Build the package
+        run: |
+          mkdir -p build/rotate-everything
+          rsync -a --delete --delete-excluded \
+            --exclude-from=.distignore ./ build/rotate-everything/
+
+      - name: Show what is in the package
+        run: find build/rotate-everything -type f | sort
+
+      - name: Run Plugin Check
+        uses: WordPress/plugin-check-action@v1.1.9
+        with:
+          build-dir: ./build/rotate-everything
+          categories: |
+            general
+            plugin_repo
+            security
+            performance
+            accessibility
+          include-experimental: true
+          # Nothing is tolerated, warnings included.
+          strict: true
