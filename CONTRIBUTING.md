@@ -4,12 +4,13 @@ Thanks for looking. This is a small plugin with a narrow scope, and most of what
 
 ## Before you open a pull request
 
-Read the **Design decisions** section of [README.md](README.md). Four of them are load-bearing, and a change that breaks one will be declined regardless of how well it is written:
+Read the **Design decisions** section of [README.md](README.md). Five of them are load-bearing, and a change that breaks one will be declined regardless of how well it is written:
 
 1. **Nothing is written to the saved markup.** No `blocks.getSaveElement`, no `blocks.getSaveContent.extraProps`, no `save` override. The angle stays in the block comment and the transform is applied at render time.
-2. **No build step.** The editor script is ES5 against the global `wp` object. No `@wordpress/scripts`, no webpack, no JSX, no `package.json`.
-3. **No JavaScript on the front end.** Ever.
-4. **No runtime Composer dependency.** `composer.json` exists for PHPCS and is excluded from the release.
+2. **No JavaScript on the front end.** Ever. The build exists for the editor script and nothing else.
+3. **The toolchain is `@wordpress/scripts` and nothing else.** No second bundler, no Babel config of our own, no PostCSS pipeline. The front-end stylesheet stays hand-written: two rules do not need a preprocessor.
+4. **Nothing from `node_modules` ships.** The `@wordpress/*` packages are devDependencies, externalised by webpack to the `wp.*` globals. If a change makes the bundle grow past a few KB, something is being bundled that should not be.
+5. **No runtime Composer dependency.** `composer.json` exists for PHPCS and is excluded from the release.
 
 Also declined by default: a settings page, an option in the database, an admin notice, a credit in the front-end output, an outgoing request of any kind, and a bundled third-party library where WordPress already ships one.
 
@@ -20,8 +21,14 @@ Widening `rotate_everything_supported_blocks`' default is a separate conversatio
 ```bash
 git clone git@github.com:Fyrins/rotate-everything.git
 cd rotate-everything
-composer install
+composer install          # PHPCS
+npm install               # @wordpress/scripts
+npm run build             # produces build/editor.js
 ```
+
+`npm run build` is not optional. `build/` is not in the repository, and without it the plugin loads but the Rotation panel never appears: `enqueue_editor_assets()` finds no asset file and returns. There is no admin notice telling you so, by design.
+
+Use `npm start` while working on `src/editor.js`; it rebuilds on save.
 
 Symlink or copy the directory into a WordPress install at `wp-content/plugins/rotate-everything`. Keep that exact directory name.
 
@@ -42,6 +49,7 @@ ddev wp plugin install plugin-check --activate
 Sync the plugin in by applying `.distignore`, so you are looking at what ships:
 
 ```bash
+( cd /path/to/rotate-everything && npm run build )
 rsync -a --delete --delete-excluded --exclude-from=.distignore \
   /path/to/rotate-everything/ web/wp-content/plugins/rotate-everything/
 ```
@@ -49,6 +57,18 @@ rsync -a --delete --delete-excluded --exclude-from=.distignore \
 `--delete-excluded` is not optional. Without it rsync protects excluded files from deletion, and the target directory stays polluted by whatever the previous sync left there.
 
 ## What has to pass
+
+### JavaScript
+
+```bash
+npm run lint:js           # ESLint with the WordPress config, plus Prettier
+npm run format            # applies the formatting
+npm run build
+```
+
+Nothing reported by the linter. `.prettierrc.js` re-exports `@wordpress/prettier-config`; without it Prettier falls back to its own defaults and `format` and `lint-js` reformat the same file two different ways, each undoing the other.
+
+Watch the bundle size in the build output. It sits under 3 KB. A jump means a package stopped being externalised and is now being bundled, which is a bug, not a size problem.
 
 ### PHPCS
 
@@ -63,12 +83,15 @@ Nothing reported. Not "a few warnings we live with": nothing. The ruleset is `ph
 On the built package, in a directory named exactly `rotate-everything`, across all five categories:
 
 ```bash
-rsync -a --delete --delete-excluded --exclude-from=.distignore ./ build/rotate-everything/
+npm run build
+rsync -a --delete --delete-excluded --exclude-from=.distignore ./ dist/rotate-everything/
 # with the package synced into the testbed:
 ddev wp plugin check rotate-everything \
   --categories=general,plugin_repo,security,performance,accessibility \
   --include-experimental
 ```
+
+Build first. A package assembled without `build/` is a package whose editor script is missing, and Plugin Check will happily pass it.
 
 Zero errors, zero warnings. Running it on the source tree instead reports the development files; running it under a different directory name makes it infer the wrong text domain and bury everything real.
 
@@ -79,9 +102,14 @@ Zero errors, zero warnings. Running it on the source tree instead reports the de
 ## Translations
 
 ```bash
-wp i18n make-pot . languages/rotate-everything.pot
-wp i18n make-json languages/ --no-purge
+npm run i18n
 ```
+
+That runs four steps: `make-pot` over `src/` (not over `build/`, whose strings are minified), `update-po`, `make-mo`, and `make-json` with a path map.
+
+The map is the part that bites. `wp_set_script_translations()` names the JSON file after the md5 of the **registered** script path, which is `build/editor.js`, while the POT references `src/editor.js`. Without `--use-map={"src/editor.js":"build/editor.js"}` the JSON gets the wrong name and the editor silently falls back to English, with no error anywhere. CI checks the hash on every run.
+
+If the entry point ever moves, the hash changes and the translations have to be regenerated.
 
 Regenerate the `.pot` from the code rather than editing it. If you add a string:
 
@@ -105,7 +133,7 @@ Maintainers only.
    git push origin v1.0.1
    ```
 
-`deploy.yml` fires on `v*`. Before touching SVN it checks the tag against the plugin header, the PHP constant and the readme's stable tag, refuses a stable tag of `trunk`, and requires a changelog section in both `CHANGELOG.md` and `readme.txt`. Any of those failing stops the run before anything is published. Once the directory has the release, the same job opens the GitHub release with the notes taken from `CHANGELOG.md`.
+`deploy.yml` fires on `v*`. Before touching SVN it checks the tag against the plugin header, the PHP constant and the readme's stable tag, refuses a stable tag of `trunk`, and requires a changelog section in both `CHANGELOG.md` and `readme.txt`. Any of those failing stops the run before anything is published. It then builds the editor script, refuses to publish if the bundle or its translation JSON is missing, and only after the directory has the release does it open the GitHub release with the notes taken from `CHANGELOG.md`.
 
 Every action in both workflows is pinned to a commit SHA rather than a tag. A tag is a movable reference, and the deploy job holds the SVN credentials: whatever that tag pointed at tomorrow would publish under the maintainer's wordpress.org account. Bump a pin by editing the SHA and the comment together.
 

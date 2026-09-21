@@ -39,22 +39,22 @@ msgid "https://alexandre-revire.fr"
 msgstr "https://alexandre-revire.fr"
 
 #. translators: Title of the block inspector panel that tilts a block.
-#: assets/js/editor.js:114
+#: src/editor.js:104
 msgctxt "block inspector panel title"
 msgid "Rotation"
 msgstr "Rotation"
 
-#: assets/js/editor.js:119
+#: src/editor.js:113
 msgid "Angle"
 msgstr "Angle"
 
 #. translators: Button that sets the rotation angle back to zero.
-#: assets/js/editor.js:143
+#: src/editor.js:137
 msgctxt "button label"
 msgid "Reset"
 msgstr "Réinitialiser"
 
 #. translators: 1: Lowest angle offered, in degrees. 2: Highest angle offered, in degrees.
-#: assets/js/editor.js:126
+#: src/editor.js:120
 msgid "Between %1$d° and %2$d°. A rotated block keeps its original space on the page, so its corners overlap neighbouring content, and a full-width block at a large angle can push the page sideways. Rotating text also makes that text harder to read."
 msgstr "Entre %1$d° et %2$d°. Un bloc pivoté conserve sa place d'origine dans la page, donc ses coins débordent sur le contenu voisin, et un bloc pleine largeur à grand angle peut faire défiler la page latéralement. Faire pivoter du texte le rend aussi plus difficile à lire."

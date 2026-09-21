@@ -1,8 +1,14 @@
 # Development tooling, never published.
 /vendor/
+/node_modules/
+
+# Built editor script. Produced by `npm run build`, assembled into the package
+# by CI, and deliberately not committed: a bundle diff is unreadable and it
+# drifts from the source the first time someone forgets to rebuild.
+/build/
 
 # Package assembled for the plugin directory, rebuilt on demand.
-/build/
+/dist/
 
 # Working notes on how this plugin was put together. Local to the machine on
 # purpose: they are context for whoever picks the work back up, not a deliverable.

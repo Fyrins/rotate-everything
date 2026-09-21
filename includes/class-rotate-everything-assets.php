@@ -103,24 +103,57 @@ final class Rotate_Everything_Assets {
 	}
 
 	/**
+	 * Path of the built editor script, relative to the plugin directory.
+	 *
+	 * Also the path the translation JSON file is named after: WordPress hashes
+	 * this string, so moving the script means regenerating the JSON.
+	 *
+	 * @var string
+	 */
+	const EDITOR_SCRIPT_PATH = 'build/editor.js';
+
+	/**
+	 * Path of the asset file webpack writes next to the script.
+	 *
+	 * @var string
+	 */
+	const EDITOR_ASSET_PATH = 'build/editor.asset.php';
+
+	/**
 	 * Enqueues the editor script and hands it the PHP configuration.
+	 *
+	 * The dependency list and the cache-busting version are read from the file
+	 * webpack writes next to the bundle, rather than kept by hand: a hand-written
+	 * list drifts the first time an import changes, and the symptom is a script
+	 * that loads before the package it needs.
+	 *
+	 * The build directory is absent from a fresh clone, since it is not in the
+	 * repository. Bailing out quietly is deliberate; the plugin adds no admin
+	 * notice, and CONTRIBUTING.md says to run `npm run build`.
 	 *
 	 * @return void
 	 */
 	public static function enqueue_editor_assets() {
+		$asset_file = ROTATE_EVERYTHING_PATH . self::EDITOR_ASSET_PATH;
+
+		if ( ! file_exists( $asset_file ) ) {
+			return;
+		}
+
+		$asset = require $asset_file;
+
+		$dependencies = ( is_array( $asset ) && isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) )
+			? $asset['dependencies']
+			: array();
+		$version      = ( is_array( $asset ) && isset( $asset['version'] ) && is_string( $asset['version'] ) )
+			? $asset['version']
+			: ROTATE_EVERYTHING_VERSION;
+
 		wp_enqueue_script(
 			self::EDITOR_SCRIPT_HANDLE,
-			plugins_url( 'assets/js/editor.js', ROTATE_EVERYTHING_FILE ),
-			array(
-				'wp-blocks',
-				'wp-block-editor',
-				'wp-components',
-				'wp-compose',
-				'wp-element',
-				'wp-hooks',
-				'wp-i18n',
-			),
-			ROTATE_EVERYTHING_VERSION,
+			plugins_url( self::EDITOR_SCRIPT_PATH, ROTATE_EVERYTHING_FILE ),
+			$dependencies,
+			$version,
 			true
 		);
 

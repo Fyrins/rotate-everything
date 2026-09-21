@@ -83,10 +83,37 @@ jobs:
 
           exit "$STATUS"
 
-      # The action reads .distignore itself to build what it commits, and pushes
-      # .wordpress-org/ to SVN's assets/ directory. The two secrets are created
-      # by hand by the maintainer; see CONTRIBUTING.md. Until they exist this
-      # step fails, which is the correct outcome.
+      # The editor bundle is not in the repository, so it has to be built here.
+      # Without this step the action would happily publish a package whose
+      # editor script does not exist, and the Rotation panel would simply never
+      # appear for anyone who installed the release.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build the editor script
+        run: |
+          npm ci
+          npm run build
+
+      - name: Refuse to publish without the built script
+        run: |
+          set -euo pipefail
+          test -f build/editor.js
+          test -f build/editor.asset.php
+          EXPECTED=$(php -r "echo md5('build/editor.js');")
+          if [ ! -f "languages/rotate-everything-fr_FR-$EXPECTED.json" ]; then
+            echo "::error::Translation JSON does not match build/editor.js. Run npm run i18n."
+            exit 1
+          fi
+
+      # The action reads .distignore itself to build what it commits, which now
+      # includes build/ and excludes src/, and pushes .wordpress-org/ to SVN's
+      # assets/ directory. The two secrets are created by hand by the
+      # maintainer; see CONTRIBUTING.md. Until they exist this step fails, which
+      # is the correct outcome.
       #
       # Pinned to the SHA of 2.3.0, for the reason given on the checkout step.
       - name: Deploy to the plugin directory

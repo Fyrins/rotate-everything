@@ -18,6 +18,8 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every action is pinned to a commit SHA. A tag is a movable reference, and the
+# sibling workflow publishes under the maintainer's wordpress.org account.
 jobs:
   syntax:
     name: Syntax, PHP ${{ matrix.php }}
@@ -41,7 +43,7 @@ jobs:
 
       - name: Lint every PHP file
         run: |
-          find . -path ./vendor -prune -o -name '*.php' -print0 \
+          find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 \
             | xargs -0 -n1 -P4 php -l
 
   coding-standards:
@@ -71,6 +73,43 @@ jobs:
         if: ${{ always() }}
         run: cs2pr ./phpcs-report.xml
 
+  javascript:
+    name: JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:js
+
+      - name: Build
+        run: npm run build
+
+      # The bundle is not in the repository, so the translation JSON is named
+      # after a path that only exists after a build. Checking it here catches
+      # the case where the entry point moved and nobody regenerated: the editor
+      # would quietly fall back to English, with no error anywhere.
+      - name: Check the translation JSON matches the built script path
+        run: |
+          set -euo pipefail
+          EXPECTED=$(php -r "echo md5('build/editor.js');")
+          echo "Expected hash for build/editor.js: $EXPECTED"
+          if [ ! -f "languages/rotate-everything-fr_FR-$EXPECTED.json" ]; then
+            echo "::error::languages/ has no JSON named after build/editor.js. Run npm run i18n."
+            ls -1 languages/
+            exit 1
+          fi
+
   plugin-check:
     name: Plugin Check
     runs-on: ubuntu-latest
@@ -78,25 +117,44 @@ jobs:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      # The built bundle is not committed, so it has to exist before the package
+      # is assembled. Checking the plugin without it would check a plugin whose
+      # editor script is missing.
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
       # Plugin Check has to look at the package, not at the working tree. Run on
       # the source it reports the development files, and the directory name has
       # to be exactly the slug because that is what it infers the text domain
       # from. --delete-excluded is what makes a rebuild clean: without it rsync
       # protects excluded files from deletion and the target keeps whatever the
       # previous run left behind.
-      - name: Build the package
+      - name: Assemble the package
         run: |
-          mkdir -p build/rotate-everything
+          mkdir -p dist/rotate-everything
           rsync -a --delete --delete-excluded \
-            --exclude-from=.distignore ./ build/rotate-everything/
+            --exclude-from=.distignore ./ dist/rotate-everything/
 
       - name: Show what is in the package
-        run: find build/rotate-everything -type f | sort
+        run: find dist/rotate-everything -type f | sort
+
+      - name: Fail if the built script is missing from the package
+        run: |
+          test -f dist/rotate-everything/build/editor.js
+          test -f dist/rotate-everything/build/editor.asset.php
 
       - name: Run Plugin Check
         uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
         with:
-          build-dir: ./build/rotate-everything
+          build-dir: ./dist/rotate-everything
           categories: |
             general
             plugin_repo

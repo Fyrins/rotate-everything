@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-17T22:55:24+00:00\n"
+"POT-Creation-Date: 2026-09-21T04:40:00+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.10.0\n"
 "X-Domain: rotate-everything\n"
@@ -40,22 +40,22 @@ msgid "https://alexandre-revire.fr"
 msgstr ""
 
 #. translators: Title of the block inspector panel that tilts a block.
-#: assets/js/editor.js:114
+#: src/editor.js:104
 msgctxt "block inspector panel title"
 msgid "Rotation"
 msgstr ""
 
-#: assets/js/editor.js:119
+#: src/editor.js:113
 msgid "Angle"
 msgstr ""
 
 #. translators: 1: Lowest angle offered, in degrees. 2: Highest angle offered, in degrees.
-#: assets/js/editor.js:126
+#: src/editor.js:120
 msgid "Between %1$d° and %2$d°. A rotated block keeps its original space on the page, so its corners overlap neighbouring content, and a full-width block at a large angle can push the page sideways. Rotating text also makes that text harder to read."
 msgstr ""
 
 #. translators: Button that sets the rotation angle back to zero.
-#: assets/js/editor.js:143
+#: src/editor.js:137
 msgctxt "button label"
 msgid "Reset"
 msgstr ""

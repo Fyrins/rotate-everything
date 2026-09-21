@@ -39,6 +39,21 @@ No JavaScript. One small stylesheet, requested only on pages that actually conta
 
 Everything is configured in code. `rotate_everything_supported_blocks` sets the block types, `rotate_everything_min_angle` and `rotate_everything_max_angle` set the range, `rotate_everything_step` sets the increment, `rotate_everything_default_angle` sets the starting value, and `rotate_everything_transition_duration` sets or removes the transition. The development README documents each one with an example.
 
+**Source code and build**
+
+The editor script shipped in `build/` is compiled from `src/editor.js`. The uncompiled source, the build configuration and the full history live in the public repository:
+
+https://github.com/Fyrins/rotate-everything
+
+The toolchain is [@wordpress/scripts](https://www.npmjs.com/package/@wordpress/scripts), the build tool maintained by the WordPress project, and nothing else. To reproduce the shipped file:
+
+`git clone https://github.com/Fyrins/rotate-everything.git
+cd rotate-everything
+npm install
+npm run build`
+
+The front-end stylesheet is not compiled: `assets/css/rotate-everything.css` is written by hand and shipped as it reads.
+
 == Installation ==
 
 1. In your admin, go to Plugins, then Add New Plugin, and search for Rotate Everything.

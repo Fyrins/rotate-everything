@@ -3,9 +3,19 @@
 # leak it into a published release, and Plugin Check does not always catch it.
 .*
 
+# Sources and build tooling. The package ships build/, which is what WordPress
+# loads; the sources live on GitHub and readme.txt says where, as guideline 4
+# requires.
+/src/
+/node_modules/
+/package.json
+/package-lock.json
+
+# Staging directory for the package itself.
+/dist/
+
 # Development tooling and repository paperwork. The published package carries
 # readme.txt, which is what the plugin directory reads.
-/build/
 /docs/
 /tests/
 /vendor/

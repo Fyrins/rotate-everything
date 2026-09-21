@@ -34,9 +34,13 @@ First release.
 - Nothing is written to the saved markup. The `rotation` attribute has no
   `source`, so it lives in the block comment and block validation ignores it.
   Deactivating the plugin invalidates no block.
-- No JavaScript on the front end, no build step, no runtime Composer
-  dependency, no option in the database, no settings page and no outgoing
-  request.
+- No JavaScript on the front end, no runtime Composer dependency, no option in
+  the database, no settings page and no outgoing request.
+- The editor script is built from `src/editor.js` with `@wordpress/scripts`.
+  The front-end stylesheet is not compiled. Nothing from `node_modules` is
+  shipped: the `@wordpress/*` packages are externalised to the globals
+  WordPress already serves, and the bundle stays under 3 KB. Sources and build
+  instructions are in the repository, linked from `readme.txt`.
 - `core/image` is the only block type supported by default. Rotating running
   text hurts legibility, so widening the list is an explicit decision made
   through a filter.
