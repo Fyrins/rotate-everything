@@ -1,0 +1,27 @@
+{
+    "translation-revision-date": "2026-09-18 00:00+0000",
+    "generator": "WP-CLI\/2.10.0",
+    "source": "build\/editor.js",
+    "domain": "messages",
+    "locale_data": {
+        "messages": {
+            "": {
+                "domain": "messages",
+                "lang": "fr_FR",
+                "plural-forms": "nplurals=2; plural=(n > 1);"
+            },
+            "block inspector panel title\u0004Rotation": [
+                "Rotation"
+            ],
+            "Angle": [
+                "Angle"
+            ],
+            "button label\u0004Reset": [
+                "R\u00e9initialiser"
+            ],
+            "Between %1$d\u00b0 and %2$d\u00b0. A rotated block keeps its original space on the page, so its corners overlap neighbouring content, and a full-width block at a large angle can push the page sideways. Rotating text also makes that text harder to read.": [
+                "Entre %1$d\u00b0 et %2$d\u00b0. Un bloc pivot\u00e9 conserve sa place d'origine dans la page, donc ses coins d\u00e9bordent sur le contenu voisin, et un bloc pleine largeur \u00e0 grand angle peut faire d\u00e9filer la page lat\u00e9ralement. Faire pivoter du texte le rend aussi plus difficile \u00e0 lire."
+            ]
+        }
+    }
+}

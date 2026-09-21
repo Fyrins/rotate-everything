@@ -1,0 +1,31 @@
+{
+  "name": "rotate-everything",
+  "version": "1.0.0",
+  "description": "Rotate any block by a free angle from the editor sidebar. Server-rendered CSS transform, no JavaScript on the front end.",
+  "scripts": {
+    "build": "wp-scripts build editor=./src/editor.js",
+    "start": "wp-scripts start editor=./src/editor.js",
+    "lint:js": "wp-scripts lint-js src",
+    "format": "wp-scripts format src",
+    "packages-update": "wp-scripts packages-update",
+    "i18n": "wp i18n make-pot . languages/rotate-everything.pot --slug=rotate-everything --domain=rotate-everything --package-name=\"Rotate Everything\" --exclude=vendor,node_modules,build,dist,docs,tests,.github && wp i18n update-po languages/rotate-everything.pot languages/rotate-everything-fr_FR.po && wp i18n make-mo languages/ && wp i18n make-json languages/ --no-purge --pretty-print --use-map='{\"src/editor.js\":\"build/editor.js\"}'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fyrins/rotate-everything.git"
+  },
+  "license": "GPL-2.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Fyrins/rotate-everything/issues"
+  },
+  "homepage": "https://wordpress.org/plugins/rotate-everything/",
+  "private": true,
+  "devDependencies": {
+    "@wordpress/block-editor": "^17.1.0",
+    "@wordpress/components": "^40.1.0",
+    "@wordpress/compose": "^8.8.0",
+    "@wordpress/hooks": "^4.55.0",
+    "@wordpress/i18n": "^6.28.0",
+    "@wordpress/scripts": "^35.0.0"
+  }
+}

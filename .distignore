@@ -1,0 +1,27 @@
+# Every hidden file and directory, first and without exception. A tool that
+# drops a cache or a log directory at the root of the plugin must not be able to
+# leak it into a published release, and Plugin Check does not always catch it.
+.*
+
+# Sources and build tooling. The package ships build/, which is what WordPress
+# loads; the sources live on GitHub and readme.txt says where, as guideline 4
+# requires.
+/src/
+/node_modules/
+/package.json
+/package-lock.json
+
+# Staging directory for the package itself.
+/dist/
+
+# Development tooling and repository paperwork. The published package carries
+# readme.txt, which is what the plugin directory reads.
+/docs/
+/tests/
+/vendor/
+/composer.json
+/composer.lock
+/phpcs.xml.dist
+/CHANGELOG.md
+/CONTRIBUTING.md
+/README.md

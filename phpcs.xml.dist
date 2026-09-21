@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<ruleset name="Rotate Everything">
+	<description>Coding standards for the Rotate Everything plugin.</description>
+
+	<file>.</file>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/docs/*</exclude-pattern>
+	<exclude-pattern>/dist/*</exclude-pattern>
+
+	<!--
+		build/ holds generated output. editor.asset.php is written by webpack,
+		so it is not ours to format and not ours to fix.
+	-->
+	<exclude-pattern>/build/*</exclude-pattern>
+
+	<arg name="basepath" value="."/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<!--
+		The plugin targets WordPress 6.2 because that is the release the HTML
+		Tag Processor shipped in, and PHP 7.4 and up. Declaring both here keeps
+		the sniffs about deprecated functions and about newer syntax honest.
+	-->
+	<config name="minimum_wp_version" value="6.2"/>
+	<config name="testVersion" value="7.4-"/>
+
+	<rule ref="WordPress"/>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="rotate_everything"/>
+				<element value="ROTATE_EVERYTHING"/>
+				<element value="Rotate_Everything"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="rotate-everything"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="PHPCompatibilityWP"/>
+</ruleset>

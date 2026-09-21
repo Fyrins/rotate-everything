@@ -1,0 +1,22 @@
+{
+    "name": "fyrins/rotate-everything",
+    "description": "Rotate any block by a free angle from the editor sidebar: server-rendered CSS transform, no JavaScript on the front end.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "minimum-stability": "stable",
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "wp-coding-standards/wpcs": "^3.1",
+        "phpcompatibility/phpcompatibility-wp": "^2.1"
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "lint:fix": "phpcbf",
+        "lint:php": "find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l"
+    }
+}

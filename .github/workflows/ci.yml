@@ -1,0 +1,166 @@
+name: CI
+
+# Both triggers are needed. `push` on main covers a direct commit and a merge;
+# `pull_request` without a branch filter covers every proposal, whatever branch
+# it comes from. A workflow that only listens to one of the two silently never
+# runs on the branch you actually work on.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every action is pinned to a commit SHA. A tag is a movable reference, and the
+# sibling workflow publishes under the maintainer's wordpress.org account.
+jobs:
+  syntax:
+    name: Syntax, PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor declared in the plugin header, and every version above it
+        # that still gets security support.
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+
+      - name: Lint every PHP file
+        run: |
+          find . -path ./vendor -prune -o -path ./node_modules -prune -o -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+  coding-standards:
+    name: Coding standards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: cs2pr
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+
+      # The project ruleset sets testVersion to 7.4- and minimum_wp_version to
+      # 6.2, so PHPCompatibilityWP and the deprecation sniffs check against the
+      # versions the plugin actually claims to support.
+      - name: Run PHPCS
+        run: vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
+
+      - name: Annotate the diff
+        if: ${{ always() }}
+        run: cs2pr ./phpcs-report.xml
+
+  javascript:
+    name: JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:js
+
+      - name: Build
+        run: npm run build
+
+      # The bundle is not in the repository, so the translation JSON is named
+      # after a path that only exists after a build. Checking it here catches
+      # the case where the entry point moved and nobody regenerated: the editor
+      # would quietly fall back to English, with no error anywhere.
+      - name: Check the translation JSON matches the built script path
+        run: |
+          set -euo pipefail
+          EXPECTED=$(php -r "echo md5('build/editor.js');")
+          echo "Expected hash for build/editor.js: $EXPECTED"
+          if [ ! -f "languages/rotate-everything-fr_FR-$EXPECTED.json" ]; then
+            echo "::error::languages/ has no JSON named after build/editor.js. Run npm run i18n."
+            ls -1 languages/
+            exit 1
+          fi
+
+  plugin-check:
+    name: Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      # The built bundle is not committed, so it has to exist before the package
+      # is assembled. Checking the plugin without it would check a plugin whose
+      # editor script is missing.
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
+      # Plugin Check has to look at the package, not at the working tree. Run on
+      # the source it reports the development files, and the directory name has
+      # to be exactly the slug because that is what it infers the text domain
+      # from. --delete-excluded is what makes a rebuild clean: without it rsync
+      # protects excluded files from deletion and the target keeps whatever the
+      # previous run left behind.
+      - name: Assemble the package
+        run: |
+          mkdir -p dist/rotate-everything
+          rsync -a --delete --delete-excluded \
+            --exclude-from=.distignore ./ dist/rotate-everything/
+
+      - name: Show what is in the package
+        run: find dist/rotate-everything -type f | sort
+
+      - name: Fail if the built script is missing from the package
+        run: |
+          test -f dist/rotate-everything/build/editor.js
+          test -f dist/rotate-everything/build/editor.asset.php
+
+      - name: Run Plugin Check
+        uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
+        with:
+          build-dir: ./dist/rotate-everything
+          categories: |
+            general
+            plugin_repo
+            security
+            performance
+            accessibility
+          include-experimental: true
+          # Nothing is tolerated, warnings included.
+          strict: true
